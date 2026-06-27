@@ -75,8 +75,28 @@ src/
   components/ScreenScaffold.tsx  shared header / ComingSoon
 docs/
   AUDIT.md                 full code audit, security, usability, business-logic plan
+  ARCHITECTURE.md          data flow + backend contract
+  COMPONENTS.md            inventory of every recovered screen/component/function
+  REVERSE_ENGINEERING.md   exact vs reconstructed — fidelity statement
   login.fixed.reference.ts annotated standalone fix
+original/                  ⬅ the EXACT originals extracted from the APK
+  index.android.bundle             the shipped app logic (every byte)
+  index.android.bundle.decompiled.js  full decompilation of the bundle
+  AndroidManifest.xml · app.config.json · kotlin-tooling-metadata.json
+  resources/strings.xml · resources/colors.xml
+  res-images/                      all 253 raster assets, exact bytes
 ```
+
+## 📦 Fidelity (read this)
+- **`original/` is byte/pixel-exact** — copied verbatim from the APK (bundle,
+  manifest, config, strings, colors, all raster images incl. the real launcher
+  icon `res-images/sK.webp`).
+- **`app/` + `src/` are a faithful reconstruction**, not the original source
+  files. Release **Hermes bytecode is lossy/one-way**: it permanently discards
+  original file boundaries, comments, formatting, types and (in release) variable
+  names, so byte-exact *source* cannot be recovered from any RN/Expo APK. Behaviour,
+  screens, strings, keypad, colors and the API contract are reproduced exactly.
+  Full statement: [`docs/REVERSE_ENGINEERING.md`](docs/REVERSE_ENGINEERING.md).
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the data flow and backend contract.
 
