@@ -25,3 +25,8 @@ npm-debug.*
 yarn-error.*
 .DS_Store
 *.log
+
+# IDE
+.idea/
+.vscode/
+

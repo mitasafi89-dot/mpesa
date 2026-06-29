@@ -20,13 +20,18 @@
       "package": "com.example.oneapp",
       "edgeToEdgeEnabled": false,
       "allowBackup": false,
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE", "USE_BIOMETRIC", "VIBRATE"]
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": { "favicon": "./assets/favicon.png", "bundler": "metro" },
-    "plugins": ["expo-router", "expo-secure-store", "expo-local-authentication"],
+    "plugins": ["expo-router", "expo-secure-store"],
     "extra": {
       "router": {},
-      "apiBase": "https://mpesa.highpesa.com"
+      "apiBase": "https://mpesa.highpesa.com",
+      "eas": { "projectId": "0321a0fe-5523-4868-bf89-41d1c93e6478" }
     }
   }
 }

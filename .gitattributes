@@ -1,0 +1,22 @@
+# Normalize text to LF, but never touch binary assets.
+# (Repo has core.autocrlf=true which was corrupting binaries — these rules stop that.)
+* text=auto eol=lf
+
+# Binary assets — store verbatim, no EOL conversion
+*.png   binary
+*.webp  binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.apk   binary
+*.aab   binary
+*.keystore binary
+*.so    binary
+*.bundle binary
+*.bin   binary
+
