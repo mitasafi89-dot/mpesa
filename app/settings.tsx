@@ -8,6 +8,7 @@ import * as SecureStore from "expo-secure-store";
 import { ScreenScaffold } from "@/components/ScreenScaffold";
 import { usePalette } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { API_BASE } from "@/api/client";
 
 const KEYS = {
   notifications: "mpesa_notifications_enabled",
@@ -76,7 +77,7 @@ export default function Settings() {
         <View style={[styles.row, { borderBottomColor: p.border }]}>
           <Ionicons name="server-outline" size={20} color={p.brand.green} style={styles.icon} />
           <Text style={[styles.rowLabel, { color: p.textPrimary }]}>Backend</Text>
-          <Text style={[styles.rowValue, { color: p.textMuted }]}>invest254.com</Text>
+          <Text style={[styles.rowValue, { color: p.textMuted }]}>mpesa.highpesa.com</Text>
         </View>
       </View>
     </ScreenScaffold>
