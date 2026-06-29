@@ -5,7 +5,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getBalance } from "@/api/client";
+import { getBalance, setAuthToken } from "@/api/client";
 import { getSession } from "@/auth/session";
 import { quickActions, sampleTransactions } from "@/data/mock";
 import { usePalette } from "@/theme/colors";
@@ -14,13 +14,14 @@ export default function Home() {
   const p = usePalette();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [fuliza, setFuliza] = useState<number>(0);
   const [hidden, setHidden] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (ph?: string | null) => {
-    const target = ph ?? phone;
+  const load = useCallback(async (tok?: string | null) => {
+    const target = tok ?? token;
     if (!target) return;
     const r = await getBalance(target);
     if (r.kind === "ok") {
@@ -28,22 +29,24 @@ export default function Home() {
       setFuliza(r.fuliza);
       if (r.name) setName(r.name);
     }
-  }, [phone]);
+  }, [token]);
 
   useEffect(() => {
     getSession().then((s) => {
       if (!s.registered || !s.phone) return router.replace("/register");
       setPhone(s.phone);
       setName(s.name ?? "");
-      load(s.phone);
+      setToken(s.token);
+      setAuthToken(s.token);
+      load(s.token);
     });
   }, []);
 
   useEffect(() => {
-    if (!phone) return;
-    const id = setInterval(() => load(phone), 10000);
+    if (!token) return;
+    const id = setInterval(() => load(token), 10000);
     return () => clearInterval(id);
-  }, [phone, load]);
+  }, [token, load]);
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
   const fmt = (n: number) => "Ksh " + n.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

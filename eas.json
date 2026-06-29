@@ -13,13 +13,13 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_BASE": "https://mpesa.highpesa.com"
+        "EXPO_PUBLIC_API_BASE": "https://invest254-api.fly.dev"
       }
     },
     "production": {
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_BASE": "https://mpesa.highpesa.com"
+        "EXPO_PUBLIC_API_BASE": "https://invest254-api.fly.dev"
       }
     }
   },

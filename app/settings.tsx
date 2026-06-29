@@ -76,7 +76,7 @@ export default function Settings() {
         <View style={[styles.row, { borderBottomColor: p.border }]}>
           <Ionicons name="server-outline" size={20} color={p.brand.green} style={styles.icon} />
           <Text style={[styles.rowLabel, { color: p.textPrimary }]}>Backend</Text>
-          <Text style={[styles.rowValue, { color: p.textMuted }]}>mpesa.highpesa.com</Text>
+          <Text style={[styles.rowValue, { color: p.textMuted }]}>invest254-api.fly.dev</Text>
         </View>
       </View>
     </ScreenScaffold>

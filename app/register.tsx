@@ -68,7 +68,7 @@ export default function Register() {
     const res = await register(phone, finalPin, name);
     setSubmitting(false);
     if (res.kind === "ok" || res.kind === "already_exists") {
-      await persist({ phone, name });
+      await persist({ phone, name, token: res.kind === "ok" ? res.token : null });
       router.replace("/pin");
     } else {
       setError(res.message);

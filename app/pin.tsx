@@ -63,7 +63,7 @@ export default function PinScreen() {
 
     switch (outcome.kind) {
       case "success":
-        await saveSession({ phone, name: outcome.user.name });
+        await saveSession({ phone, name: outcome.user.name || undefined, token: outcome.token });
         router.replace("/home");
         return;
 

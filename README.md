@@ -2,7 +2,15 @@
 
 A React Native + Expo (SDK 55, expo-router) mobile app: a Safaricom M-PESA–style
 wallet front end with registration, PIN login, a balance dashboard, and
-money-movement screens, talking to the backend at `https://mpesa.highpesa.com`.
+money-movement screens, talking to the [Invest254](https://github.com/mitasafi89-dot/invest254)
+backend at `https://invest254-api.fly.dev` (REST under `/api/v1`).
+
+> ## 🔌 Backend: Invest254
+> The app authenticates against the Invest254 REST API (phone + password + JWT) and reads
+> the player wallet. Because the M-PESA-style UI is phone + 4-digit PIN, the API client
+> (`src/api/client.ts`) deterministically derives a backend-valid username and password from
+> the inputs the user already provides. This is a **demo bridge** — replace it with a real
+> password flow before production use.
 
 > ## ⚠️ How this repository was produced
 > The original project source was lost. This codebase was **reconstructed by
