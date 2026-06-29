@@ -63,7 +63,7 @@ export default function PinScreen() {
 
     switch (outcome.kind) {
       case "success":
-        await saveSession({ phone, name: outcome.user.name || undefined, token: outcome.token });
+        await saveSession({ phone, name: outcome.user.name || undefined, token: outcome.token, role: outcome.role });
         router.replace("/home");
         return;
 
@@ -90,6 +90,15 @@ export default function PinScreen() {
       case "not_registered":
         await clearSession();
         router.replace("/register");
+        return;
+
+      case "not_allowed_role":
+        setError(outcome.message);
+        await clearSession();
+        setTimeout(() => {
+          setPin("");
+          router.replace("/register");
+        }, 900);
         return;
 
       case "network_error":

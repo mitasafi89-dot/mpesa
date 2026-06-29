@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { getSession } from "@/auth/session";
+import { isMpesaAppRole } from "@/api/client";
 import { usePalette } from "@/theme/colors";
 
 export default function Index() {
@@ -14,7 +15,8 @@ export default function Index() {
   useEffect(() => {
     (async () => {
       const s = await getSession();
-      router.replace(s.registered && s.phone ? "/pin" : "/register");
+      const canUseApp = !s.role || isMpesaAppRole(s.role);
+      router.replace(s.registered && s.phone && canUseApp ? "/pin" : "/register");
       setReady(true);
     })();
   }, []);

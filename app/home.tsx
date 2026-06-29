@@ -5,7 +5,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getBalance, setAuthToken } from "@/api/client";
+import { getBalance, isMpesaAppRole, setAuthToken } from "@/api/client";
 import { getSession } from "@/auth/session";
 import { quickActions, sampleTransactions } from "@/data/mock";
 import { usePalette } from "@/theme/colors";
@@ -15,6 +15,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [fuliza, setFuliza] = useState<number>(0);
   const [hidden, setHidden] = useState(false);
@@ -34,9 +35,11 @@ export default function Home() {
   useEffect(() => {
     getSession().then((s) => {
       if (!s.registered || !s.phone) return router.replace("/register");
+      if (!s.token || !isMpesaAppRole(s.role)) return router.replace("/pin");
       setPhone(s.phone);
       setName(s.name ?? "");
       setToken(s.token);
+      setRole(s.role);
       setAuthToken(s.token);
       load(s.token);
     });
@@ -78,6 +81,20 @@ export default function Home() {
             </Pressable>
           </View>
         </View>
+
+        {/* Admin entry — only for admin/superadmin */}
+        {(role === "admin" || role === "superadmin" || role === "super_admin") && (
+          <Pressable style={[styles.adminCard, { backgroundColor: p.surface, borderColor: p.border }]} onPress={() => router.push("/admin")}>
+            <View style={[styles.adminIcon, { backgroundColor: p.brand.greenTintLight }]}>
+              <Ionicons name="people-outline" size={22} color={p.brand.greenDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.adminTitle, { color: p.textPrimary }]}>Manage users</Text>
+              <Text style={[styles.adminSub, { color: p.textSecondary }]}>View, suspend, ban, set roles &amp; adjust balances</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={p.textMuted} />
+          </Pressable>
+        )}
 
         {/* Quick actions */}
         <View style={styles.grid}>
@@ -121,6 +138,10 @@ const styles = StyleSheet.create({
   cardBalance: { color: "#fff", fontSize: 30, fontWeight: "800", marginTop: 6 },
   cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 16 },
   cardFuliza: { color: "#E8F5E9", fontSize: 13 },
+  adminCard: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 20, marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  adminIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  adminTitle: { fontSize: 15, fontWeight: "700" },
+  adminSub: { fontSize: 12, marginTop: 2 },
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, marginTop: 22 },
   action: { width: "25%", alignItems: "center", marginBottom: 18 },
   actionIcon: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", marginBottom: 6 },

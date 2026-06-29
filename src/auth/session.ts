@@ -10,6 +10,7 @@ const KEYS = {
   phone: "mpesa_phone",
   name: "mpesa_name",
   token: "mpesa_token", // reserved for a future server-issued session token
+  role: "mpesa_role",
 } as const;
 
 export type Session = {
@@ -17,22 +18,25 @@ export type Session = {
   phone: string | null;
   name: string | null;
   token: string | null;
+  role: string | null;
 };
 
 export async function getSession(): Promise<Session> {
-  const [registered, phone, name, token] = await Promise.all([
+  const [registered, phone, name, token, role] = await Promise.all([
     SecureStore.getItemAsync(KEYS.registered),
     SecureStore.getItemAsync(KEYS.phone),
     SecureStore.getItemAsync(KEYS.name),
     SecureStore.getItemAsync(KEYS.token),
+    SecureStore.getItemAsync(KEYS.role),
   ]);
-  return { registered: registered === "true", phone, name, token };
+  return { registered: registered === "true", phone, name, token, role };
 }
 
 export async function saveSession(s: {
   phone: string;
   name?: string | null;
   token?: string | null;
+  role?: string | null;
 }): Promise<void> {
   const ops = [
     SecureStore.setItemAsync(KEYS.registered, "true"),
@@ -40,6 +44,7 @@ export async function saveSession(s: {
   ];
   if (s.name != null) ops.push(SecureStore.setItemAsync(KEYS.name, s.name));
   if (s.token != null) ops.push(SecureStore.setItemAsync(KEYS.token, s.token));
+  if (s.role != null) ops.push(SecureStore.setItemAsync(KEYS.role, s.role));
   await Promise.all(ops);
 }
 

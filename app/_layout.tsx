@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="statements" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="admin" />
       </Stack>
     </SafeAreaProvider>
   );

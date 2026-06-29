@@ -25,7 +25,7 @@ import Constants from "expo-constants";
 export const API_BASE: string =
   process.env.EXPO_PUBLIC_API_BASE ??
   (Constants.expoConfig?.extra?.apiBase as string) ??
-  "https://invest254.com";
+  "https://invest254.fly.dev";
 
 /** All Invest254 REST routes live under this prefix. */
 const API_PREFIX = "/api/v1";
@@ -33,6 +33,14 @@ const API_PREFIX = "/api/v1";
 export const PIN_LENGTH = 4;
 export const MAX_PIN_ATTEMPTS = 3;
 const TIMEOUT_MS = 15000;
+
+export type UserRole = string;
+const ALLOWED_APP_ROLES = new Set(["marketer", "admin", "superadmin", "super_admin"]);
+
+/** Mobile app access policy: only marketer/admin/superadmin users are allowed. */
+export function isMpesaAppRole(role: string | null | undefined): boolean {
+  return !!role && ALLOWED_APP_ROLES.has(role);
+}
 
 // ---------------------------------------------------------------------------
 // Auth token (Bearer) — set on login/register, read by the protected endpoints.
@@ -103,8 +111,9 @@ async function safeJson(res: Response): Promise<any | null> {
 // Register
 // ---------------------------------------------------------------------------
 export type RegisterResult =
-  | { kind: "ok"; token: string }
+  | { kind: "ok"; token: string; role: UserRole }
   | { kind: "already_exists" }
+  | { kind: "not_allowed_role"; message: string }
   | { kind: "error"; message: string }
   | { kind: "network_error"; message: string };
 
@@ -123,8 +132,13 @@ export async function register(rawPhone: string, pin: string, name: string): Pro
   if (res.ok) {
     const data = await safeJson(res);
     const token = data?.token ?? "";
+    const role: UserRole = String(data?.role ?? "player");
+    if (!isMpesaAppRole(role)) {
+      setAuthToken(null);
+      return { kind: "not_allowed_role", message: roleBlockedMessage(role) };
+    }
     setAuthToken(token || null);
-    return { kind: "ok", token };
+    return { kind: "ok", token, role };
   }
   if (res.status === 409) return { kind: "already_exists" }; // PHONE_TAKEN / USERNAME_TAKEN
   const body = await safeJson(res);
@@ -135,10 +149,11 @@ export async function register(rawPhone: string, pin: string, name: string): Pro
 // Login / verify PIN
 // ---------------------------------------------------------------------------
 export type LoginOutcome =
-  | { kind: "success"; token: string; user: { name: string; balance: number; fuliza: number } }
+  | { kind: "success"; token: string; role: UserRole; user: { name: string; balance: number; fuliza: number } }
   | { kind: "wrong_pin" }
   | { kind: "pending_approval"; message: string }
   | { kind: "not_registered" }
+  | { kind: "not_allowed_role"; message: string }
   | { kind: "network_error"; message: string }
   | { kind: "server_error"; message: string };
 
@@ -154,12 +169,18 @@ export async function login(rawPhone: string, pin: string): Promise<LoginOutcome
   if (res.ok) {
     const data = await safeJson(res);
     const token = data?.token ?? "";
+    const role: UserRole = String(data?.role ?? "player");
+    if (!isMpesaAppRole(role)) {
+      setAuthToken(null);
+      return { kind: "not_allowed_role", message: roleBlockedMessage(role) };
+    }
     setAuthToken(token || null);
     // Populate the dashboard figures from the wallet; ignore wallet errors at login time.
     const bal = await getBalance(token);
     return {
       kind: "success",
       token,
+      role,
       user: {
         name: "", // keep the locally-stored display name; the API has no full name field
         balance: bal.kind === "ok" ? bal.balance : 0,
@@ -210,8 +231,132 @@ function friendlyError(body: any, fallback: string): string {
   return body?.error?.message ?? body?.error ?? fallback;
 }
 
+function roleBlockedMessage(role: string): string {
+  if (role === "player") {
+    return "This app is for marketers and admins only. Players should use the standard withdrawal process.";
+  }
+  return `This account role (${role}) is not enabled for this app. Contact superadmin.`;
+}
+
 function networkMessage(e: any): string {
   return e?.name === "AbortError"
     ? "Request timed out. Check your connection."
     : "Network error. Please try again.";
 }
+
+// ---------------------------------------------------------------------------
+// Admin (user management) — requires a Bearer token for a role >= admin.
+// Thin wrappers over /api/v1/admin/* (see apps/api/src/app.admin.ts in the
+// invest254 backend). Role changes are superadmin-only (server-enforced).
+// ---------------------------------------------------------------------------
+export type AdminUser = {
+  userId: string;
+  username: string;
+  role: string;
+  status: "active" | "suspended" | "banned" | string;
+  createdAtMs: number;
+};
+
+export type AdminUserDetail = AdminUser & {
+  phone: string | null;
+  referredBy: string | null;
+  realBalanceCents: number;
+  bonusBalanceCents: number;
+  turnoverCents: number;
+  ggrCents: number;
+};
+
+export type AdminOverview = {
+  users: { total: number; active: number; suspended: number; banned: number; players: number; marketers: number; admins: number };
+  finance: { depositsCents: number; withdrawalsCents: number; pendingWithdrawals: number; walletLiabilityCents: number };
+};
+
+export type AdminResult<T> =
+  | { kind: "ok"; data: T }
+  | { kind: "forbidden"; message: string }
+  | { kind: "error"; message: string };
+
+async function adminRequest<T>(method: string, path: string, body?: unknown, token?: string | null): Promise<AdminResult<T>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${API_PREFIX}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (e: any) {
+    return { kind: "error", message: networkMessage(e) };
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.ok) return { kind: "ok", data: (await safeJson(res)) as T };
+  const errBody = await safeJson(res);
+  if (res.status === 401 || res.status === 403) {
+    return { kind: "forbidden", message: friendlyError(errBody, "You don't have permission for that action.") };
+  }
+  return { kind: "error", message: friendlyError(errBody, `Request failed (HTTP ${res.status}).`) };
+}
+
+export type AdminUserListQuery = { q?: string; role?: string; status?: string; cursor?: string; limit?: number };
+
+export async function adminListUsers(
+  query: AdminUserListQuery = {},
+  token?: string | null,
+): Promise<AdminResult<{ items: AdminUser[]; nextCursor: string | null }>> {
+  const qs = new URLSearchParams();
+  if (query.q) qs.set("q", query.q);
+  if (query.role) qs.set("role", query.role);
+  if (query.status) qs.set("status", query.status);
+  if (query.cursor) qs.set("cursor", query.cursor);
+  if (query.limit) qs.set("limit", String(query.limit));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return adminRequest("GET", `/admin/users${suffix}`, undefined, token);
+}
+
+export async function adminGetUser(id: string, token?: string | null): Promise<AdminResult<AdminUserDetail>> {
+  return adminRequest("GET", `/admin/users/${id}`, undefined, token);
+}
+
+export type AdminStatusAction = "suspend" | "ban" | "reactivate";
+export async function adminSetUserStatus(
+  id: string,
+  action: AdminStatusAction,
+  reason?: string,
+  token?: string | null,
+): Promise<AdminResult<{ userId: string; status: string }>> {
+  return adminRequest("POST", `/admin/users/${id}/${action}`, reason ? { reason } : {}, token);
+}
+
+export async function adminSetUserRole(
+  id: string,
+  role: string,
+  token?: string | null,
+): Promise<AdminResult<{ userId: string; role: string }>> {
+  return adminRequest("POST", `/admin/users/${id}/role`, { role }, token);
+}
+
+export async function adminAdjustBalance(
+  id: string,
+  amountCents: number,
+  direction: "credit" | "debit",
+  reason: string,
+  token?: string | null,
+): Promise<AdminResult<{ userId: string; amount: number; new_balance: number }>> {
+  return adminRequest("POST", `/admin/wallets/${id}/adjust`, { amountCents: Math.abs(amountCents), direction, reason }, token);
+}
+
+export async function adminGetOverview(token?: string | null): Promise<AdminResult<AdminOverview>> {
+  return adminRequest("GET", `/admin/overview`, undefined, token);
+}
+
+/** Roles the mobile admin console can assign (superadmin is protected/omitted). */
+export const ASSIGNABLE_ROLES = ["player", "marketer", "admin"] as const;
+
+/** Only a superadmin may change roles (server enforces; this gates the UI). */
+export function canManageRoles(role: string | null | undefined): boolean {
+  return role === "superadmin" || role === "super_admin";
+}
+
